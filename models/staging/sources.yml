@@ -1,0 +1,22 @@
+version: 2
+sources:
+  - name: bronze
+    catalog: jaffle_shop
+    schema: bronze
+    description: "S3에서 read_files()로 적재된 원본 CSV 데이터"
+    tables:
+      - name: raw_customers
+        description: "고객 원본 데이터"
+        columns:
+          - name: id
+            tests: [not_null]
+      - name: raw_orders
+        description: "주문 원본 데이터"
+        columns:
+          - name: id
+            tests: [not_null]
+      - name: raw_payments
+        description: "결제 원본 데이터"
+        columns:
+          - name: id
+            tests: [not_null]

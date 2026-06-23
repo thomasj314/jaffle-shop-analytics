@@ -1,0 +1,25 @@
+name: 'jaffle_shop'
+version: '1.0.0'
+profile: 'jaffle_shop'
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  jaffle_shop:
+    staging:
+      +materialized: view
+    silver:
+      +materialized: table
+    gold:
+      +materialized: table
+      +schema: gold
