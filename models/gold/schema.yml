@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: fct_daily_revenue
+    description: "일별 완료 주문 기준 매출, 주문 수, AOV 트렌드"
+    columns:
+      - name: order_date
+        description: "주문일"
+        tests: [not_null, unique]
+      - name: order_count
+        description: "완료 주문 수"
+        tests: [not_null]
+      - name: customer_count
+        description: "구매 고객 수"
+      - name: revenue
+        description: "총 매출 (USD)"
+      - name: aov
+        description: "평균 주문 금액 (Average Order Value)"
+
+  - name: fct_monthly_orders
+    description: "월별 주문 집계 — 상태 분포, 반품률, 신규 고객 수"
+    columns:
+      - name: month
+        description: "주문 월 (월 첫째 날 기준)"
+        tests: [not_null, unique]
+      - name: total_orders
+        description: "총 주문 수"
+      - name: return_rate_pct
+        description: "반품률 (returned / total * 100)"
+      - name: new_customers
+        description: "해당 월 첫 구매 고객 수"
+
+  - name: fct_payment_method_mix
+    description: "월별 결제수단별 매출 금액 및 비중"
+    columns:
+      - name: month
+        description: "주문 월"
+        tests: [not_null]
+      - name: payment_method
+        description: "결제 수단 (credit_card / bank_transfer / coupon / gift_card)"
+        tests: [not_null]
+      - name: revenue_share_pct
+        description: "해당 월 전체 매출 대비 결제수단 비중 (%)"
+
+  - name: dim_customer_ltv
+    description: "고객별 LTV, 주문 이력, AOV, 세그먼트 (High Value / Repeat / One-time)"
+    columns:
+      - name: customer_id
+        description: "고객 ID"
+        tests: [not_null, unique]
+      - name: ltv
+        description: "총 결제 금액 (Lifetime Value, USD)"
+      - name: aov
+        description: "평균 주문 금액"
+      - name: customer_segment
+        description: "고객 세그먼트: High Value(5회+) / Repeat(2~4회) / One-time(1회)"
+
+  - name: dim_customer_rfm
+    description: "RFM 세그먼테이션 — 고객을 최근성/빈도/금액 기준으로 1~5점 채점 후 세그먼트 분류"
+    columns:
+      - name: customer_id
+        description: "고객 ID"
+        tests: [not_null, unique]
+      - name: r_score
+        description: "Recency 점수 (1~5, 높을수록 최근 구매)"
+      - name: f_score
+        description: "Frequency 점수 (1~5, 높을수록 자주 구매)"
+      - name: m_score
+        description: "Monetary 점수 (1~5, 높을수록 고액 구매)"
+      - name: rfm_segment
+        description: "Champions / Loyal Customers / New Customers / At Risk / Lost / Potential Loyalists"
+
+  - name: fct_cohort_retention
+    description: "월별 코호트 잔존율 — 첫 구매월 기준 경과 월수별 재구매 비율"
+    columns:
+      - name: cohort_month
+        description: "코호트 기준월 (고객 첫 구매월)"
+        tests: [not_null]
+      - name: cohort_size
+        description: "코호트 전체 고객 수"
+      - name: months_since_first
+        description: "코호트 기준 경과 개월 수 (0 = 첫 구매월)"
+      - name: retention_rate_pct
+        description: "잔존율 (%) — 해당 월에 재구매한 고객 / 코호트 전체"
