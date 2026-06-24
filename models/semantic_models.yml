@@ -1,0 +1,161 @@
+version: 2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Semantic Models — MetricFlow grain 정의
+# dbt 1.6+ MetricFlow: semantic_model이 물리 테이블의 entity/dimension/measure를 선언
+# metrics가 이를 조합해 비즈니스 지표를 정의
+# ─────────────────────────────────────────────────────────────────────────────
+
+semantic_models:
+
+  # ── 1. Orders ───────────────────────────────────────────────────────────────
+  - name: orders
+    description: "주문 grain — 주문 1건당 1행. 시계열 분석의 기준."
+    model: ref('stg_orders')
+    defaults:
+      agg_time_dimension: order_date   # time 집계 기본 dimension
+
+    entities:
+      - name: order
+        type: primary
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+
+    dimensions:
+      - name: order_date
+        description: "주문일 (DATE)"
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        description: "주문 상태 (placed/shipped/completed/return_pending/returned)"
+        type: categorical
+
+    measures:
+      - name: order_count
+        description: "주문 건수"
+        agg: count
+        expr: order_id
+      - name: distinct_customers
+        description: "구매 고객 수 (중복 제거)"
+        agg: count_distinct
+        expr: customer_id
+
+  # ── 2. Payments ─────────────────────────────────────────────────────────────
+  # stg_payments는 order_date가 없어 agg_time_dimension 설정 불가
+  # → orders와 조인한 fct_order_payments 사용
+  - name: payments
+    description: "결제 grain — 결제 1건당 1행. fct_order_payments(orders 조인)로 order_date 확보."
+    model: ref('fct_order_payments')
+    defaults:
+      agg_time_dimension: order_date   # orders에서 가져온 시간 차원
+
+    entities:
+      - name: payment
+        type: primary
+        expr: payment_id
+      - name: order
+        type: foreign
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+
+    dimensions:
+      - name: order_date
+        description: "주문일 (결제의 시간 기준)"
+        type: time
+        type_params:
+          time_granularity: day
+      - name: payment_method
+        description: "결제 수단 (credit_card / bank_transfer / coupon / gift_card)"
+        type: categorical
+      - name: status
+        description: "주문 상태"
+        type: categorical
+
+    measures:
+      - name: revenue
+        description: "총 결제 금액 (USD)"
+        agg: sum
+        expr: amount
+      - name: payment_count
+        description: "결제 건수"
+        agg: count
+        expr: payment_id
+
+  # ── 3. Customers ────────────────────────────────────────────────────────────
+  # stg_customers에는 시간 차원 없음 → measure 제외, dimension 용도로만 사용
+  - name: customers
+    description: "고객 grain — 고객 1명당 1행. dimension 전용 (measure 없음)."
+    model: ref('stg_customers')
+
+    entities:
+      - name: customer
+        type: primary
+        expr: customer_id
+
+    dimensions:
+      - name: first_name
+        type: categorical
+      - name: last_name
+        type: categorical
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Metrics — 비즈니스 지표 정의
+# ─────────────────────────────────────────────────────────────────────────────
+
+metrics:
+
+  # ── 매출 ────────────────────────────────────────────────────────────────────
+  - name: revenue
+    label: "총 매출 (USD)"
+    description: "전체 결제 금액 합계"
+    type: simple
+    type_params:
+      measure: revenue
+
+  - name: order_count
+    label: "주문 건수"
+    description: "전체 주문 수 (상태 무관)"
+    type: simple
+    type_params:
+      measure: order_count
+
+  - name: aov
+    label: "평균 주문 금액 (AOV)"
+    description: "revenue ÷ order_count. 주문당 평균 결제 금액."
+    type: derived
+    type_params:
+      expr: "revenue / order_count"
+      metrics:
+        - name: revenue
+        - name: order_count
+
+  - name: payment_count
+    label: "결제 건수"
+    description: "전체 결제 트랜잭션 수 (분할결제 포함)"
+    type: simple
+    type_params:
+      measure: payment_count
+
+  # ── 고객 ────────────────────────────────────────────────────────────────────
+  - name: active_customers
+    label: "구매 고객 수"
+    description: "주문이 1건 이상 있는 고객 수 (중복 제거)"
+    type: simple
+    type_params:
+      measure: distinct_customers
+
+  - name: revenue_per_customer
+    label: "고객당 매출"
+    description: "revenue ÷ active_customers. 고객 1인당 평균 기여 매출."
+    type: derived
+    type_params:
+      expr: "revenue / active_customers"
+      metrics:
+        - name: revenue
+        - name: active_customers

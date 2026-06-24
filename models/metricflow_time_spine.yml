@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: metricflow_time_spine
+    description: "MetricFlow 시계열 집계용 날짜 차원 테이블 (2016-01-01 ~ today)"
+    time_spine:
+      standard_granularity_column: date_day  # DAY granularity 선언
+    columns:
+      - name: date_day
+        description: "날짜 (DATE 타입, 일별 grain)"
+        granularity: day
