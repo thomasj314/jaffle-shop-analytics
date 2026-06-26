@@ -22,9 +22,17 @@ jobs:
             cd ~/jaffle-shop-analytics
             git pull origin main
 
-            # dbt manifest 재생성
+            # dbt manifest + docs 재생성
             DBT_PROFILES_DIR=~/.dbt /home/ubuntu/.local/bin/dbt parse
+            DBT_PROFILES_DIR=~/.dbt /home/ubuntu/.local/bin/dbt docs generate
 
-            # Dagster 재시작
-            sudo systemctl restart dagster-webserver dagster-daemon
+            # dbt docs 서비스 최초 설치 (없을 때만)
+            if [ ! -f /etc/systemd/system/dbt-docs.service ]; then
+              sudo cp deploy/dbt-docs.service /etc/systemd/system/dbt-docs.service
+              sudo systemctl daemon-reload
+              sudo systemctl enable dbt-docs
+            fi
+
+            # 전체 재시작
+            sudo systemctl restart dagster-webserver dagster-daemon dbt-docs
             echo "✅ Deploy complete: $(date)"
