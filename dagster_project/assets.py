@@ -24,6 +24,10 @@ from pathlib import Path
 
 from dagster import asset, AssetExecutionContext, Definitions, Output
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject
+from dagster_project.dq_checks import (
+    dq_gold_row_counts, dq_revenue_anomaly, dq_return_rate,
+    dq_aov_range, dq_new_customers, dq_job, dq_schedule,
+)
 
 # ─────────────────────────────────────────────────────────────
 # 경로 / 접속 정보
@@ -210,7 +214,15 @@ defs = Definitions(
         raw_payments,
         raw_customers,
         jaffle_shop_dbt_assets,
+        # Business DQ checks
+        dq_gold_row_counts,
+        dq_revenue_anomaly,
+        dq_return_rate,
+        dq_aov_range,
+        dq_new_customers,
     ],
+    jobs=[dq_job],
+    schedules=[dq_schedule],
     resources={
         "dbt": DbtCliResource(
             project_dir=str(DBT_PROJECT_DIR),
