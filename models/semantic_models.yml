@@ -78,11 +78,21 @@ semantic_models:
 
     measures:
       - name: revenue
-        description: "총 결제 금액 (USD)"
+        description: >
+          결제 금액 합계 (USD). 모든 주문 상태 포함 (placed/shipped/completed/returned).
+          '매출'의 정의: status = 'completed' 기준은 Gold fct_daily_revenue 테이블 참조.
+          이 measure는 gross 결제액이며, status 필터는 쿼리 시 dimension으로 적용 가능.
         agg: sum
         expr: amount
+      - name: revenue_completed
+        description: >
+          완료(completed) 주문의 결제 금액 합계 (USD).
+          반품(returned/return_pending), 미완료(placed/shipped) 제외.
+          '매출이 얼마야?'라는 비즈니스 질문에는 이 measure를 사용.
+        agg: sum
+        expr: CASE WHEN status = 'completed' THEN amount ELSE 0 END
       - name: payment_count
-        description: "결제 건수"
+        description: "결제 건수 (모든 주문 상태 포함)"
         agg: count
         expr: payment_id
 
@@ -112,11 +122,24 @@ metrics:
 
   # ── 매출 ────────────────────────────────────────────────────────────────────
   - name: revenue
-    label: "총 매출 (USD)"
-    description: "전체 결제 금액 합계"
+    label: "Gross 결제액 (USD)"
+    description: >
+      모든 주문 상태의 결제 금액 합계. 반품 포함.
+      '총 결제가 발생한 금액'을 볼 때 사용.
+      실제 확정 매출은 revenue_net 지표 사용.
     type: simple
     type_params:
       measure: revenue
+
+  - name: revenue_net
+    label: "확정 매출 (USD)"
+    description: >
+      completed 상태 주문의 결제 금액 합계.
+      반품(returned/return_pending) 및 미완료(placed/shipped) 제외.
+      '매출이 얼마야?'라는 질문의 정답. Gold fct_daily_revenue와 동일 기준.
+    type: simple
+    type_params:
+      measure: revenue_completed
 
   - name: order_count
     label: "주문 건수"
