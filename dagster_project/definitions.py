@@ -49,7 +49,7 @@ DBT_EXE          = shutil.which("dbt") or str(Path.home() / ".local" / "bin" / "
 # ─────────────────────────────────────────────────────────────
 jaffle_shop_job = define_asset_job(
     name="jaffle_shop_pipeline",
-    selection=AssetSelection.groups("ingestion", "bronze", "default"),
+    selection=AssetSelection.all() - AssetSelection.groups("dq_business"),
     description="합성 데이터 생성 → Bronze 적재 → Silver dbt → SCD2 Snapshot",
 )
 
