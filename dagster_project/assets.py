@@ -18,9 +18,10 @@ Jaffle Shop Dagster Assets
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
-from dagster import asset, AssetExecutionContext, Output
+from dagster import asset, AssetExecutionContext, Definitions, Output
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject
 
 # ─────────────────────────────────────────────────────────────
@@ -28,7 +29,8 @@ from dagster_dbt import DbtCliResource, dbt_assets, DbtProject
 # ─────────────────────────────────────────────────────────────
 DBT_PROJECT_DIR = Path(__file__).parent.parent  # jaffle_shop/
 
-PYTHON_EXE = r"C:\Users\sksms\AppData\Local\Programs\Python\Python313\python.exe"
+# Windows / Linux 모두 동작하는 Python 실행파일 경로
+PYTHON_EXE = sys.executable
 
 # 🚩 접속 정보는 환경변수로 관리 — .env 파일에 넣고 .gitignore에 추가할 것
 # 로컬 개발: jaffle_shop/.env 파일에 아래 변수 정의
@@ -195,3 +197,23 @@ def jaffle_shop_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # SCD2 Snapshot (customers_snapshot)
     context.log.info("▶ dbt snapshot 시작 (SCD2 이력)")
     yield from dbt.cli(["snapshot"], context=context).stream()
+
+
+# ═════════════════════════════════════════════════════════════
+# Definitions — Dagster가 인식하는 최상위 등록 객체
+# ═════════════════════════════════════════════════════════════
+defs = Definitions(
+    assets=[
+        synthetic_data,
+        raw_orders,
+        raw_payments,
+        raw_customers,
+        jaffle_shop_dbt_assets,
+    ],
+    resources={
+        "dbt": DbtCliResource(
+            project_dir=str(DBT_PROJECT_DIR),
+            profiles_dir=str(Path.home() / ".dbt"),
+        ),
+    },
+)
