@@ -17,6 +17,7 @@ Jaffle Shop Dagster Assets
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -214,6 +215,7 @@ defs = Definitions(
         "dbt": DbtCliResource(
             project_dir=str(DBT_PROJECT_DIR),
             profiles_dir=str(Path.home() / ".dbt"),
+            dbt_executable=shutil.which("dbt") or str(Path.home() / ".local" / "bin" / "dbt"),
         ),
     },
 )
