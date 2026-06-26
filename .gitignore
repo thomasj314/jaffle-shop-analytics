@@ -32,3 +32,12 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# AWS / SSH 키 (절대 커밋 금지)
+*.pem
+*.key
+aws_creds_temp.txt
+aws_config_temp.txt
+
+# 크리덴셜 포함 스크립트 (절대 커밋 금지)
+ec2_setup.ps1
