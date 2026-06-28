@@ -33,6 +33,16 @@ jobs:
               sudo systemctl enable dbt-docs
             fi
 
+            # Proxy API 의존성 설치
+            pip3 install -r proxy_api/requirements.txt
+
+            # Proxy API 서비스 최초 설치 (없을 때만)
+            if [ ! -f /etc/systemd/system/proxy-api.service ]; then
+              sudo cp deploy/proxy-api.service /etc/systemd/system/proxy-api.service
+              sudo systemctl daemon-reload
+              sudo systemctl enable proxy-api
+            fi
+
             # 전체 재시작
-            sudo systemctl restart dagster-webserver dagster-daemon dbt-docs
+            sudo systemctl restart dagster-webserver dagster-daemon dbt-docs proxy-api
             echo "✅ Deploy complete: $(date)"

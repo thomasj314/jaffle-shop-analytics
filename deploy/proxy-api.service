@@ -1,0 +1,13 @@
+[Unit]
+Description=Databricks Proxy API
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/jaffle-shop-analytics
+Environment="PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/ubuntu/.local/bin/uvicorn proxy_api.main:app --host 0.0.0.0 --port 8888
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
