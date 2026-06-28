@@ -5,15 +5,17 @@ EC2에서 실행되는 FastAPI 서버.
 Sandbox(Claude) → EC2 프록시 → Databricks API 경로를 제공.
 
 엔드포인트:
-  GET  /health              - 서버 상태 확인
-  GET  /clusters            - 클러스터 목록
-  POST /sql                 - SQL 실행 (Databricks SQL Warehouse)
-  POST /pyspark             - PySpark 코드 실행 (클러스터)
-  GET  /pyspark/{cmd_id}    - PySpark 실행 결과 조회
+  GET  /health                              - 서버 상태 확인
+  GET  /clusters                            - 클러스터 목록
+  POST /clusters/create                     - 클러스터 생성
+  POST /clusters/start/{cluster_id}         - 클러스터 시작
+  GET  /clusters/{cluster_id}               - 클러스터 상태 조회
+  POST /sql                                 - SQL 실행 (Databricks SQL Warehouse)
+  POST /pyspark                             - PySpark 코드 실행 (클러스터)
+  GET  /pyspark/{cluster_id}/{ctx}/{cmd}    - PySpark 실행 결과 조회
 """
 
 import os
-import time
 import httpx
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -54,6 +56,13 @@ class PySparkRequest(BaseModel):
     code: str
     cluster_id: str
 
+class ClusterCreateRequest(BaseModel):
+    cluster_name: str = "claude-pyspark"
+    spark_version: str = "15.4.x-scala2.12"   # Databricks Runtime LTS
+    node_type_id: str = "i3.xlarge"
+    num_workers: int = 1
+    autotermination_minutes: int = 30
+
 
 # ── 엔드포인트 ─────────────────────────────────────────────
 
@@ -64,7 +73,7 @@ def health():
 
 @app.get("/clusters", dependencies=[Depends(verify)])
 async def list_clusters():
-    """전체 클러스터 목록 조회 (상태 무관)"""
+    """전체 클러스터 목록 조회"""
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(f"{DB_BASE}/api/2.0/clusters/list", headers=DB_HEADERS)
     data = resp.json()
@@ -77,14 +86,6 @@ async def list_clusters():
         for c in data.get("clusters", [])
     ]
     return {"clusters": clusters}
-
-
-class ClusterCreateRequest(BaseModel):
-    cluster_name: str = "claude-pyspark"
-    spark_version: str = "15.4.x-scala2.12"   # Databricks Runtime LTS
-    node_type_id: str = "i3.xlarge"
-    num_workers: int = 1
-    autotermination_minutes: int = 30
 
 
 @app.post("/clusters/create", dependencies=[Depends(verify)])
@@ -100,10 +101,6 @@ async def create_cluster(req: ClusterCreateRequest):
                 "node_type_id": req.node_type_id,
                 "num_workers": req.num_workers,
                 "autotermination_minutes": req.autotermination_minutes,
-                "spark_conf": {
-                    "spark.databricks.cluster.profile": "singleNode"
-                    if req.num_workers == 0 else ""
-                },
             },
         )
     return resp.json()
@@ -157,7 +154,6 @@ async def execute_sql(req: SQLRequest):
         )
     result = resp.json()
 
-    # 결과 파싱
     status = result.get("status", {}).get("state")
     if status == "SUCCEEDED":
         schema = [c["name"] for c in result.get("manifest", {}).get("schema", {}).get("columns", [])]
@@ -165,4 +161,66 @@ async def execute_sql(req: SQLRequest):
         return {"status": "SUCCEEDED", "columns": schema, "rows": rows, "row_count": len(rows)}
     else:
         error = result.get("status", {}).get("error", {})
-        return {"status": status, "error": e
+        return {"status": status, "error": error.get("message", str(result))}
+
+
+@app.post("/pyspark", dependencies=[Depends(verify)])
+async def execute_pyspark(req: PySparkRequest):
+    """클러스터에서 PySpark 코드 실행 (비동기 — command_id 반환)"""
+    async with httpx.AsyncClient(timeout=30) as client:
+        ctx_resp = await client.post(
+            f"{DB_BASE}/api/1.2/contexts/create",
+            headers=DB_HEADERS,
+            json={"clusterId": req.cluster_id, "language": "python"},
+        )
+        ctx = ctx_resp.json()
+        if "id" not in ctx:
+            raise HTTPException(status_code=400, detail=f"Context 생성 실패: {ctx}")
+
+        cmd_resp = await client.post(
+            f"{DB_BASE}/api/1.2/commands/execute",
+            headers=DB_HEADERS,
+            json={
+                "clusterId": req.cluster_id,
+                "contextId": ctx["id"],
+                "language": "python",
+                "command": req.code,
+            },
+        )
+        cmd = cmd_resp.json()
+
+    return {
+        "command_id": cmd.get("id"),
+        "context_id": ctx["id"],
+        "cluster_id": req.cluster_id,
+        "status": "submitted",
+    }
+
+
+@app.get("/pyspark/{cluster_id}/{context_id}/{command_id}", dependencies=[Depends(verify)])
+async def get_pyspark_result(cluster_id: str, context_id: str, command_id: str):
+    """PySpark 실행 결과 조회"""
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            f"{DB_BASE}/api/1.2/commands/status",
+            headers=DB_HEADERS,
+            params={
+                "clusterId": cluster_id,
+                "contextId": context_id,
+                "commandId": command_id,
+            },
+        )
+    result = resp.json()
+    status = result.get("status")
+
+    if status == "Finished":
+        results = result.get("results", {})
+        return {
+            "status": "Finished",
+            "result_type": results.get("resultType"),
+            "data": results.get("data"),
+        }
+    elif status == "Error":
+        return {"status": "Error", "cause": result.get("results", {}).get("cause")}
+    else:
+        return {"status": status}
