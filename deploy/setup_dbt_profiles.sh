@@ -30,7 +30,7 @@ jaffle_shop:
       host: dbc-b79af0ed-5484.cloud.databricks.com
       http_path: /sql/1.0/warehouses/c6d4c0096051c243
       token: ${DATABRICKS_TOKEN}
-      schema: silver
+      schema: dev
       catalog: jaffle_analytics
       threads: 4
     prod:
@@ -38,7 +38,7 @@ jaffle_shop:
       host: dbc-b79af0ed-5484.cloud.databricks.com
       http_path: /sql/1.0/warehouses/c6d4c0096051c243
       token: ${DATABRICKS_TOKEN}
-      schema: silver
+      schema: prod
       catalog: jaffle_analytics
       threads: 4
 EOF
