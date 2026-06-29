@@ -18,11 +18,17 @@ models:
   jaffle_shop:
     staging:
       +materialized: view
-      +group: staging
+      +meta:
+        dagster:
+          group: staging
     silver:
       +materialized: table
-      +group: silver
+      +meta:
+        dagster:
+          group: silver
     gold:
       +materialized: table
       +schema: gold
-      +group: gold
+      +meta:
+        dagster:
+          group: gold
