@@ -18,8 +18,11 @@ models:
   jaffle_shop:
     staging:
       +materialized: view
+      +group: staging
     silver:
       +materialized: table
+      +group: silver
     gold:
       +materialized: table
       +schema: gold
+      +group: gold
