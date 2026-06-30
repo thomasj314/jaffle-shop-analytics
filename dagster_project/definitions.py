@@ -53,10 +53,10 @@ jaffle_shop_job = define_asset_job(
     description="합성 데이터 생성 → Bronze 적재 → Silver dbt → SCD2 Snapshot",
 )
 
-# 매일 오전 9시 KST (UTC 00:00)
+# 매일 오전 10시 KST (UTC 01:00)
 daily_schedule = ScheduleDefinition(
     job=jaffle_shop_job,
-    cron_schedule="0 0 * * *",
+    cron_schedule="0 1 * * *",
     name="daily_jaffle_shop",
 )
 

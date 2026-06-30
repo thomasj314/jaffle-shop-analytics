@@ -239,10 +239,9 @@ dq_job = define_asset_job(
     description="비즈니스 DQ 체크 — Gold 테이블 이상 감지",
 )
 
-# 매일 오전 9시 (KST) = UTC 00:00 실행
+# 매일 오전 10시 (KST) = UTC 01:00 실행
 dq_schedule = ScheduleDefinition(
     name="daily_business_dq",
     job=dq_job,
-    cron_schedule="0 0 * * *",  # UTC 00:00 = KST 09:00
-    description="매일 오전 9시(KST) 비즈니스 DQ 체크 자동 실행",
-)
+    cron_schedule="0 1 * * *",  # UTC 01:00 = KST 10:00
+    description="매일 오전 10시(KST) 비즈니스 DQ 체크 자동 실행",
