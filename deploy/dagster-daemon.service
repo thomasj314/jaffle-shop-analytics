@@ -1,0 +1,18 @@
+[Unit]
+Description=Dagster Daemon
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/jaffle-shop-analytics
+Environment="PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="DAGSTER_HOME=/home/ubuntu/dagster_home"
+ExecStart=/home/ubuntu/.local/bin/dagster-daemon run
+Restart=always
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dagster-daemon
+
+[Install]
+WantedBy=multi-user.target

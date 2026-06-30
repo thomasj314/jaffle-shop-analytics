@@ -15,6 +15,36 @@ models:
               values: ['placed','shipped','completed','return_pending','returned']
       - name: amount
         tests: [not_null]
+  - name: dagster_events
+    description: "Dagster 서비스 로그 Silver 테이블 — ANSI 제거, 이벤트 분류, traceback 필터링"
+    columns:
+      - name: log_time
+        description: "로그 발생 시각 (UTC)"
+        tests: [not_null]
+      - name: service
+        description: "systemd 서비스명 (dagster-webserver / dagster-daemon)"
+        tests: [not_null]
+      - name: logger
+        description: "Dagster 내부 logger 이름"
+      - name: level
+        description: "로그 레벨 (INFO / WARNING / ERROR / DEBUG / CRITICAL)"
+        tests:
+          - accepted_values:
+              values: ['INFO', 'WARNING', 'ERROR', 'DEBUG', 'CRITICAL', 'NOTICE', 'EMERGENCY', 'ALERT']
+      - name: event_type
+        description: "이벤트 분류 (webserver_start / daemon_start / heartbeat_timeout / error / dbt_run 등)"
+        tests: [not_null]
+      - name: content
+        description: "파싱된 실제 로그 메시지 (ANSI 제거 + Dagster 포맷 헤더 제거)"
+      - name: is_traceback
+        description: "스택트레이스 라인 여부 (Silver에서는 항상 FALSE — 이미 필터링됨)"
+      - name: host
+        description: "EC2 호스트명"
+      - name: pid
+        description: "프로세스 ID"
+      - name: ingested_at
+        description: "Zerobus 수집 시각"
+
   - name: payments
     description: "결제 Silver 테이블 (cents→USD)"
     columns:

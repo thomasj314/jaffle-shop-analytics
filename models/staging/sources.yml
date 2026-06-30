@@ -20,3 +20,16 @@ sources:
         columns:
           - name: id
             tests: [not_null]
+
+  - name: dagster_bronze
+    catalog: jaffle_analytics
+    schema: bronze
+    description: "Zerobus로 수집된 Dagster 서비스 로그"
+    tables:
+      - name: dagster_log_events
+        description: "EC2 dagster-webserver / dagster-daemon 실시간 로그"
+        columns:
+          - name: log_time
+            tests: [not_null]
+          - name: service
+            tests: [not_null]
