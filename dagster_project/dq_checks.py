@@ -171,9 +171,12 @@ def dq_aov_range(context: AssetExecutionContext):
             MIN(aov) AS min_aov,
             MAX(aov) AS max_aov,
             AVG(aov) AS avg_aov
-        FROM jaffle_shop.gold.fct_daily_revenue
-        ORDER BY order_date DESC
-        LIMIT 7
+        FROM (
+            SELECT aov
+            FROM jaffle_shop.gold.fct_daily_revenue
+            ORDER BY order_date DESC
+            LIMIT 7
+        )
     """)
 
     if not rows or rows[0][0] is None:
@@ -239,9 +242,10 @@ dq_job = define_asset_job(
     description="비즈니스 DQ 체크 — Gold 테이블 이상 감지",
 )
 
-# 매일 오전 10시 (KST) = UTC 01:00 실행
+# Daily 10:00 KST (UTC 01:00)
 dq_schedule = ScheduleDefinition(
     name="daily_business_dq",
     job=dq_job,
     cron_schedule="0 1 * * *",  # UTC 01:00 = KST 10:00
-    description="매일 오전 10시(KST) 비즈니스 DQ 체크 자동 실행",
+    description="Daily 10:00 KST - Business DQ auto check",
+)
